@@ -1,0 +1,12 @@
+version: '2'
+services:
+  nginx:
+    build: .
+    ports:
+      - "80"
+    environment:
+      VIRTUAL_HOST: "chrispotter.io, www.chrispotter.io"
+      LETSENCRYPT_HOST: "chrispotter.io, www.chrispotter.io"
+      LETSENCRYPT_EMAIL: "sysadmin@chrispotter.io"
+    restart: always
+    network_mode: "nginx-net"

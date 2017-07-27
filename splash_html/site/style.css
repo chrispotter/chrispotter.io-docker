@@ -1,0 +1,120 @@
+@font-face {
+	font-family: Avenir-Regular;
+	src: url('fonts/AvenirNext-Regular.ttf');
+}
+
+@font-face {
+	font-family: Avenir-UltraLightItalic;
+	src: url('fonts/AvenirNext-UltraLightItalic.ttf');
+}
+
+@font-face {
+	font-family: Avenir-UltraLight;
+	src: url('fonts/AvenirNext-UltraLight.ttf');
+}
+
+@font-face {
+	font-family: Bebas;
+	src: url('fonts/bebas.ttf');
+}
+
+@keyframes blinking {
+	0% { opacity: 1; }
+	50% { opacity: 0; }
+	100% {opacity 1; }
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	background: #5F9277;
+	font-size: 80%;
+	height: 100%;
+	position: relative;
+	font-family: Bebas;
+}
+
+main {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	top: 50%;
+	width: 100%;
+	margin: 0 auto;
+	padding: 20px;
+	max-width: 650px;
+	font: 20px Avenir-UltraLight, Helvetica, sans-serif;;
+	color: white;
+	left: 50%;
+}
+
+main #content {
+	width: 75%;
+	transform: translate(-50%, -50%);
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	padding: 20px;
+	text-align: center;
+}
+
+h1 {
+	font-size: 59px;
+	margin: 0;
+	font-family: Bebas, Helvetica, sans-serif;
+	letter-spacing: 10px;
+}
+
+/*h1 span {
+	animation: blinking 5s infinite ease;
+}*/
+
+p {
+	font-size: 20px;
+	letter-spacing: 1px;
+}
+
+p span {
+	font-family: Avenir-Regular, Helvetica, sans-serif;
+}
+
+#motivation {
+	margin-top: 40px;
+	position: relative;
+	padding: 10px 15px;
+	border: 1px white solid;
+}
+
+.quote {
+	font-family: Avenir-UltraLightItalic, Helvetica, sans-serif;
+	position: relative;
+	left: 0;
+}
+
+.author-name {
+	text-align: right;
+	position: absolute;
+	bottom: -12px;
+	right: 30px;
+	margin: 0;
+	background: #5F9277;
+	padding: 0px 15px;
+	font-family: Avenir-Regular, Helvetica, sans-serif;
+	white-space: nowrap;
+}
+
+@media only screen and (max-width: 650px) {
+	h1 {
+		font-size: 32px;
+		letter-spacing: 4px;
+	}
+
+	p {
+		font-size: 15px;
+	}
+
+	p span {
+		display: block;
+	}
+}

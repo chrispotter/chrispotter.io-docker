@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>chris.potter</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<link rel="apple-touch-icon-precomposed" sizes="57x57" href="http://chrispotter.io/apple-touch-icon-57x57.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="114x114" href="http://chrispotter.io/apple-touch-icon-114x114.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="72x72" href="http://chrispotter.io/apple-touch-icon-72x72.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://chrispotter.io/apple-touch-icon-144x144.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="120x120" href="http://chrispotter.io/apple-touch-icon-120x120.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="152x152" href="http://chrispotter.io/apple-touch-icon-152x152.png" />
+	<link rel="icon" type="image/png" href="http://chrispotter.io/favicon-32x32.png" sizes="32x32" />
+	<link rel="icon" type="image/png" href="http://chrispotter.io/favicon-16x16.png" sizes="16x16" />
+	<meta name="application-name" content="Chris Potter" />
+	<meta name="msapplication-TileColor" content="#FFFFFF" />
+	<meta name="msapplication-TileImage" content="http://chrispotter.io/mstile-144x144.png" />
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+	<main>
+		<div id="content">
+			<h1>Chris<span>.</span>Potter</h1>
+			<p>one day this will be cool, <span>for now there's this:</span></p>
+			<div id="motivation"></div>
+		</div>
+	</main>
+</body>
+<script type='text/javascript'>
+	$(document).ready(function () {
+		$.getJSON("https://apimk.com/motivationalquotes?get_quote=yes", function (data) {
+			$('#motivation').append('<p class="quote">' + data[0].quote + '</p> <p class="author-name" style="text-align:right;">' + data[0].author_name + '</p>')
+		});
+	});
+</script>
+
+</html>
