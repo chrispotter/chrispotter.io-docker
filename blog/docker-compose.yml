@@ -1,0 +1,12 @@
+version: '2'
+services:
+  blog:
+    build: .
+    ports:
+      - "80"
+    environment:
+      VIRTUAL_HOST: "blog.chrispotter.io"
+      LETSENCRYPT_HOST: "blog.chrispotter.io"
+      LETSENCRYPT_EMAIL: "sysadmin@chrispotter.io"
+    restart: always
+    network_mode: "nginx-net"
