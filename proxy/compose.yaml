@@ -1,0 +1,55 @@
+services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.11
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      # How acme-companion locates this container to reload it after issuing
+      # a certificate. This exact string -- not "...nginx-proxy". Without it,
+      # certs are written but nginx never picks them up.
+      - "com.github.nginx-proxy.nginx"
+    environment:
+      # Requests for an unknown hostname land on the splash site.
+      DEFAULT_HOST: chrispotter.io
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - conf:/etc/nginx/conf.d
+      # Note the path: nginx-proxy reads the socket at /tmp/docker.sock.
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks: [edge]
+    mem_limit: 96m
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: unless-stopped
+    depends_on: [nginx-proxy]
+    environment:
+      DEFAULT_EMAIL: sysadmin@chrispotter.io
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html:rw
+      - conf:/etc/nginx/conf.d
+      - acme:/etc/acme.sh
+      # And the companion reads it at /var/run/docker.sock. Deliberately
+      # different from nginx-proxy above.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [edge]
+    mem_limit: 64m
+
+volumes:
+  certs:
+  vhost:
+  html:
+  conf:
+  acme:
+
+networks:
+  edge:
+    external: true

@@ -1,0 +1,28 @@
+services:
+  splash:
+    image: ghcr.io/chrispotter/splash:${SPLASH_TAG:-latest}
+    container_name: splash
+    restart: unless-stopped
+    networks: [edge]
+    mem_limit: 32m
+    environment:
+      # Map form, not list form: "- VIRTUAL_HOST=\"x\"" keeps the quotes as
+      # part of the value. Comma-separated, no spaces.
+      VIRTUAL_HOST: chrispotter.io,www.chrispotter.io
+      VIRTUAL_PORT: 80
+      LETSENCRYPT_HOST: chrispotter.io,www.chrispotter.io
+      # Uncomment for the first issuance, then remove and recreate.
+      # No volume wipe needed -- acme-companion keeps staging state separately.
+      # LETSENCRYPT_TEST: "true"
+    healthcheck:
+      # 127.0.0.1, not localhost: localhost resolves to ::1 first inside the
+      # container and nginx binds IPv4 only, so "localhost" is refused.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  edge:
+    external: true

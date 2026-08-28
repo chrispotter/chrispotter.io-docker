@@ -1,0 +1,17 @@
+# The only file you run:  docker compose up -d
+#
+# include: needs Compose v2.20+. Per-app files stay separate and readable;
+# this stitches them into one project.
+name: chrispotter
+
+include:
+  - proxy/compose.yaml
+  - apps/splash/compose.yaml
+  # - apps/boardgames/compose.yaml    # Phase 2
+
+networks:
+  # Created once, out of band:  docker network create edge
+  # Declared external so behaviour is consistent across Compose versions
+  # rather than depending on how include: merges network definitions.
+  edge:
+    external: true

@@ -48,10 +48,25 @@ Three things worth noting even though it is retired:
 - `public/info.php` would expose full PHP configuration to anyone who reached
   it. Worth confirming it is not currently reachable on the old host.
 
-## Not in here yet
+## nginx/
 
-`nginx/` — the `jwilder/nginx-proxy` + `jrcs/letsencrypt-nginx-proxy-companion`
-stack. Both images are unmaintained and both are replaced by Traefik and
-cert-manager in the cluster, so this directory is also destined for `legacy/`.
-It is being left in place until the last app has been cut over, since it is what
-still routes the current production host.
+The `jwilder/nginx-proxy` + `jrcs/letsencrypt-nginx-proxy-companion` stack that
+used to front everything.
+
+**Status:** retired. **Data at risk: none.**
+
+Both images are unmaintained, and the companion was written against an ACME
+endpoint that no longer exists, so it could not issue a certificate today even
+if it were running. It is replaced by `proxy/compose.yaml`, which runs the
+maintained successors — `nginxproxy/nginx-proxy` and `nginxproxy/acme-companion`
+— under the same `VIRTUAL_HOST` model.
+
+One habit worth carrying forward rather than repeating: the old compose files
+set proxy variables in YAML *list* form, e.g.
+
+    environment:
+      - VIRTUAL_HOST="recipe.chrispotter.io"
+
+Compose splits list entries on the first `=`, so the quotes become part of the
+value and the proxy never matches the hostname. The replacement files all use
+map form (`VIRTUAL_HOST: chrispotter.io`) for exactly this reason.

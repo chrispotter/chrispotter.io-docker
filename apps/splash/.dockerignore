@@ -1,0 +1,10 @@
+# Never bake editor or OS cruft into the image -- COPY site/ takes everything.
+**/.DS_Store
+**/Thumbs.db
+**/*.swp
+**/*.swo
+**/.vscode
+code.txt
+compose.yaml
+Dockerfile
+.dockerignore

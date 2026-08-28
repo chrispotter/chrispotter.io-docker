@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>chris.potter</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="apple-touch-icon-precomposed" sizes="57x57" href="/apple-touch-icon-57x57.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="72x72" href="/apple-touch-icon-72x72.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="114x114" href="/apple-touch-icon-114x114.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144x144.png" />
+	<link rel="apple-touch-icon-precomposed" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+	<link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32" />
+	<link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
+	<link rel="icon" href="/favicon.ico" sizes="any" />
+	<meta name="application-name" content="Chris Potter" />
+	<meta name="msapplication-TileColor" content="#FFFFFF" />
+	<link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+	<main>
+		<div id="content">
+			<h1>Chris<span>.</span>Potter</h1>
+			<p>one day this will be cool, <span>for now there's this:</span></p>
+			<!--
+				A quote is rendered here in the markup so the page is complete with
+				JavaScript disabled. The script below swaps in a random one.
+				This used to fetch from apimk.com, which no longer resolves -- the
+				callback never fired and this box rendered empty (and #motivation
+				has a border, so the emptiness was visible). Quotes are local now.
+			-->
+			<div id="motivation">
+				<p class="quote">Make it work, make it right, make it fast.</p>
+				<p class="author-name">Kent Beck</p>
+			</div>
+		</div>
+	</main>
+
+	<script>
+		// Replace these with your own; the page picks one at random per load.
+		var QUOTES = [
+			{ quote: "Make it work, make it right, make it fast.", author: "Kent Beck" },
+			{ quote: "Premature optimization is the root of all evil.", author: "Donald Knuth" },
+			{ quote: "Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.", author: "Antoine de Saint-Exupéry" }
+		];
+
+		(function () {
+			var box = document.getElementById("motivation");
+			if (!box) return;
+
+			// Nothing to show beats an empty bordered box.
+			if (!QUOTES.length) { box.style.display = "none"; return; }
+
+			var pick = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+			var q = box.querySelector(".quote");
+			var a = box.querySelector(".author-name");
+			if (q) q.textContent = pick.quote;
+			if (a) a.textContent = pick.author;
+		})();
+	</script>
+</body>
+
+</html>
