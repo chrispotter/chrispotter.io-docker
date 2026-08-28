@@ -1,0 +1,16 @@
+# Secrets — never commit plaintext credentials.
+# Encrypted SOPS files (secrets/*.enc.env) ARE meant to be committed.
+.env
+.env.*
+!.env.example
+secrets/*.env
+!secrets/*.enc.env
+
+# Local scratch
+items.txt
+*.swp
+*.swo
+
+# OS metadata
+.DS_Store
+Thumbs.db
