@@ -6,6 +6,7 @@ name: chrispotter
 
 include:
   - proxy/compose.yaml
+  - auth/compose.yaml
   - apps/splash/compose.yaml
   # - apps/boardgames/compose.yaml    # Phase 2
 

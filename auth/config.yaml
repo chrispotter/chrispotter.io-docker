@@ -1,0 +1,66 @@
+# Dex — OIDC authorization server for chrispotter.io services.
+#
+# Dex does not store users. It federates to GitHub and speaks OIDC to our
+# services, which is what lets the MCP server point OAUTH_ISSUER at something
+# that publishes RFC 8414 metadata and a JWKS. GitHub alone cannot do that for
+# user login, which is the whole reason this exists.
+#
+# $VARS below are expanded by Dex from the container environment, so no secret
+# is committed. See auth/compose.yaml for where they come from.
+
+issuer: https://auth.chrispotter.io
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  # Plain HTTP here; nginx-proxy terminates TLS in front.
+  http: 0.0.0.0:5556
+
+# One user, who is also the operator. An approval screen on every token
+# exchange is friction with no security value at this scale.
+oauth2:
+  skipApprovalScreen: true
+
+# No local password database -- GitHub is the only way in.
+enablePasswordDB: false
+
+connectors:
+  - type: github
+    id: github
+    name: GitHub
+    config:
+      clientID: $DEX_GITHUB_CLIENT_ID
+      clientSecret: $DEX_GITHUB_CLIENT_SECRET
+      redirectURI: https://auth.chrispotter.io/callback
+
+      # READ THIS BEFORE GOING LIVE.
+      #
+      # A bare GitHub connector authenticates *any* GitHub account. It proves
+      # someone is a GitHub user; it does not prove they are you. Without one
+      # of the two controls below, anyone who finds the endpoint can complete
+      # the flow and receive a token with valid issuer, audience and scopes --
+      # all the things the resource server checks.
+      #
+      # Option A: restrict to an org you control (needs a GitHub org).
+      # orgs:
+      #   - name: your-org
+      #
+      # Option B: allowlist the subject or email at the resource server.
+      #   board-game-api validates issuer, scopes and audience -- not identity.
+      #   Tracked in board-game-api#16.
+
+staticClients:
+  # Pre-registered client, used because Dex's support for RFC 7591 Dynamic
+  # Client Registration is the open question in board-game-api#16. If the
+  # MCP client turns out to require DCR, this block is not sufficient.
+  #
+  # redirectURIs must match whatever client actually connects -- these are a
+  # placeholder until that is known.
+  - id: boardgames-mcp
+    name: Board Game MCP
+    secret: $DEX_MCP_CLIENT_SECRET
+    redirectURIs:
+      - https://boardgames-mcp.chrispotter.io/oauth/callback

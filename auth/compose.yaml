@@ -1,0 +1,38 @@
+services:
+  dex:
+    image: ghcr.io/dexidp/dex:v2.46.0
+    container_name: dex
+    restart: unless-stopped
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    networks: [edge]
+    mem_limit: 96m
+    volumes:
+      # Relative to this file -- compose `include` resolves an included
+      # file's paths against its own location, not the project root.
+      - ./config.yaml:/etc/dex/config.yaml:ro
+      - dex-data:/var/dex
+    environment:
+      VIRTUAL_HOST: auth.chrispotter.io
+      VIRTUAL_PORT: 5556
+      LETSENCRYPT_HOST: auth.chrispotter.io
+      # `:?` fails the deploy loudly if a secret is missing, rather than
+      # starting Dex with an empty client secret and failing at login.
+      DEX_GITHUB_CLIENT_ID: ${DEX_GITHUB_CLIENT_ID:?missing from .env}
+      DEX_GITHUB_CLIENT_SECRET: ${DEX_GITHUB_CLIENT_SECRET:?missing from .env}
+      DEX_MCP_CLIENT_SECRET: ${DEX_MCP_CLIENT_SECRET:?missing from .env}
+    healthcheck:
+      # 127.0.0.1, not localhost: localhost resolves to ::1 first inside the
+      # container and Dex binds IPv4 only -- the same trap that left splash
+      # permanently unhealthy.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5556/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  dex-data:
+
+networks:
+  edge:
+    external: true

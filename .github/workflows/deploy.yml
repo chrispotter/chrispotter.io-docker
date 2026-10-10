@@ -96,14 +96,21 @@ jobs:
         env:
           TAG: ${{ needs.build.outputs.tag }}
           BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
+          DEX_GITHUB_CLIENT_ID: ${{ secrets.DEX_GITHUB_CLIENT_ID }}
+          DEX_GITHUB_CLIENT_SECRET: ${{ secrets.DEX_GITHUB_CLIENT_SECRET }}
+          DEX_MCP_CLIENT_SECRET: ${{ secrets.DEX_MCP_CLIENT_SECRET }}
         run: |
           umask 077
           {
             printf 'SPLASH_TAG=%s\n' "${TAG}"
             printf 'BGG_API_TOKEN=%s\n' "${BGG_API_TOKEN}"
+            printf 'DEX_GITHUB_CLIENT_ID=%s\n' "${DEX_GITHUB_CLIENT_ID}"
+            printf 'DEX_GITHUB_CLIENT_SECRET=%s\n' "${DEX_GITHUB_CLIENT_SECRET}"
+            printf 'DEX_MCP_CLIENT_SECRET=%s\n' "${DEX_MCP_CLIENT_SECRET}"
           } > .env
 
-          tar czf - compose.yaml proxy/compose.yaml apps/*/compose.yaml .env \
+          # auth/ ships whole -- it carries config.yaml as well as compose.yaml.
+          tar czf - compose.yaml proxy/compose.yaml auth/ apps/*/compose.yaml .env \
             | ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=15 \
                 "${DEPLOY_USER}@${DEPLOY_HOST}" \
                 "mkdir -p '${DEPLOY_PATH}' && tar xzf - -C '${DEPLOY_PATH}'"
