@@ -82,15 +82,33 @@ jobs:
           printf '%s\n' '159.203.132.36 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPrYwXI1zLarZ04/fD7e/j9S08uVzOJPpQWrnWJ3Fud/' > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Ship compose files
+      - name: Ship compose files and .env
         # Pushed from the runner rather than cloned on the droplet, so the
         # droplet needs no GitHub credentials and this works whether the repo
         # is public or private. Images come from GHCR; only the wiring travels.
+        #
+        # .env is built here and shipped inside the tar rather than written by
+        # the remote shell, so no long-lived credential is ever passed as an
+        # argument -- an ssh command line is visible in the droplet's process
+        # list. (GHCR_TOKEN below still goes that route: it is scoped to this
+        # run and expires with it, so the exposure window is worth the
+        # simplicity. A BGG token is long-lived and is not.)
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
         run: |
-          tar czf - compose.yaml proxy/compose.yaml apps/*/compose.yaml \
+          umask 077
+          {
+            printf 'SPLASH_TAG=%s\n' "${TAG}"
+            printf 'BGG_API_TOKEN=%s\n' "${BGG_API_TOKEN}"
+          } > .env
+
+          tar czf - compose.yaml proxy/compose.yaml apps/*/compose.yaml .env \
             | ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=15 \
                 "${DEPLOY_USER}@${DEPLOY_HOST}" \
                 "mkdir -p '${DEPLOY_PATH}' && tar xzf - -C '${DEPLOY_PATH}'"
+
+          rm -f .env
 
       - name: Pull and restart
         env:
@@ -109,9 +127,9 @@ jobs:
           printf '%s' "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
           trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
 
-          # .env is gitignored and lives only here, recording what is actually
-          # deployed -- readable on the box without consulting CI.
-          printf 'SPLASH_TAG=%s\n' "${TAG}" > .env
+          # .env arrived in the tar above. It holds a credential, so keep it
+          # readable only by the deploy user.
+          chmod 600 .env
 
           docker compose pull
           docker compose up -d --remove-orphans
