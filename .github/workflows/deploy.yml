@@ -8,6 +8,7 @@ on:
     paths:
       - 'apps/**'
       - 'proxy/**'
+      - 'auth/**'
       - 'compose.yaml'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
