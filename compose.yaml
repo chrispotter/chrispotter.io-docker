@@ -7,11 +7,7 @@ name: chrispotter
 include:
   - proxy/compose.yaml
   - apps/splash/compose.yaml
-  # Uncomment once DEX_GITHUB_CLIENT_ID, DEX_GITHUB_CLIENT_SECRET and
-  # DEX_MCP_CLIENT_SECRET exist as repo secrets, and the auth A record
-  # resolves. Its `:?` guards fail the whole project otherwise -- not
-  # just Dex -- which blocks every compose command on the droplet.
-  # - auth/compose.yaml
+  - auth/compose.yaml
   # - apps/boardgames/compose.yaml    # Phase 2
 
 networks:
