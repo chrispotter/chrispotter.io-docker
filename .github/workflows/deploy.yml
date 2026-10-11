@@ -99,7 +99,6 @@ jobs:
           BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
           DEX_GITHUB_CLIENT_ID: ${{ secrets.DEX_GITHUB_CLIENT_ID }}
           DEX_GITHUB_CLIENT_SECRET: ${{ secrets.DEX_GITHUB_CLIENT_SECRET }}
-          DEX_MCP_CLIENT_SECRET: ${{ secrets.DEX_MCP_CLIENT_SECRET }}
         run: |
           umask 077
           {
@@ -107,7 +106,6 @@ jobs:
             printf 'BGG_API_TOKEN=%s\n' "${BGG_API_TOKEN}"
             printf 'DEX_GITHUB_CLIENT_ID=%s\n' "${DEX_GITHUB_CLIENT_ID}"
             printf 'DEX_GITHUB_CLIENT_SECRET=%s\n' "${DEX_GITHUB_CLIENT_SECRET}"
-            printf 'DEX_MCP_CLIENT_SECRET=%s\n' "${DEX_MCP_CLIENT_SECRET}"
           } > .env
 
           # auth/ ships whole -- it carries config.yaml as well as compose.yaml.

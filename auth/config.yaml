@@ -53,14 +53,24 @@ connectors:
       #   Tracked in board-game-api#16.
 
 staticClients:
-  # Pre-registered client, used because Dex's support for RFC 7591 Dynamic
-  # Client Registration is the open question in board-game-api#16. If the
-  # MCP client turns out to require DCR, this block is not sufficient.
+  # CLI client -- Claude Code and anything else that runs locally.
   #
-  # redirectURIs must match whatever client actually connects -- these are a
-  # placeholder until that is known.
-  - id: boardgames-mcp
-    name: Board Game MCP
-    secret: $DEX_MCP_CLIENT_SECRET
-    redirectURIs:
-      - https://boardgames-mcp.chrispotter.io/oauth/callback
+  # `public: true` means no client secret, which is correct: a CLI cannot keep
+  # one. With `redirectURIs` omitted, Dex accepts any callback beginning with
+  # http://localhost (any port, any path), plus the out-of-browser
+  # urn:ietf:wg:oauth:2.0:oob form. That is what a CLI needs when it binds a
+  # throwaway port per login.
+  #
+  # Note this is not a wildcard -- Dex deliberately does not support those,
+  # because an arbitrary wildcard redirect is an open-redirect vulnerability.
+  # The localhost allowance is a narrow, documented exception.
+  - id: boardgames-mcp-cli
+    name: Board Game MCP (CLI)
+    public: true
+
+  # A hosted client (claude.ai) would be a second, confidential entry here --
+  # with a secret and an exact redirectURI. Deliberately omitted: we do not yet
+  # know the redirect URI it uses, and if it performs Dynamic Client
+  # Registration (RFC 7591) instead, no pre-registered entry helps at all.
+  # Open question in board-game-api#16. Prove the CLI flow first, then add this
+  # once the hosted client's actual behaviour can be observed.
