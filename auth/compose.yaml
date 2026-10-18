@@ -19,6 +19,21 @@ services:
       # starting Dex with an empty client secret and failing at login.
       DEX_GITHUB_CLIENT_ID: ${DEX_GITHUB_CLIENT_ID:?missing from .env}
       DEX_GITHUB_CLIENT_SECRET: ${DEX_GITHUB_CLIENT_SECRET:?missing from .env}
+
+      # Dex never reads this. It exists so that Compose does.
+      #
+      # config.yaml is bind-mounted, so editing it changes nothing Compose can
+      # see: the container spec is byte-identical before and after, `up -d`
+      # finds nothing to do, and the old process keeps serving the old config.
+      # Dex reads its config once at startup, so the edit silently does not
+      # take effect -- a deploy that reports success and changed nothing.
+      #
+      # Not hypothetical: it is exactly how the MCP audience client in #4
+      # reached the droplet and stayed invisible to Dex. Putting the file's
+      # hash in the environment makes an edit part of the container spec, so
+      # Compose recreates the container when -- and only when -- the config
+      # actually changed.
+      DEX_CONFIG_SHA: ${DEX_CONFIG_SHA:?missing from .env}
     healthcheck:
       # 127.0.0.1, not localhost: localhost resolves to ::1 first inside the
       # container and Dex binds IPv4 only -- the same trap that left splash

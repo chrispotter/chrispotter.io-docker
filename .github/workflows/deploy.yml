@@ -122,6 +122,10 @@ jobs:
             printf 'BG_DB_PASSWORD=%s\n' "${BG_DB_PASSWORD}"
             printf 'BG_WRITE_TOKEN=%s\n' "${BG_WRITE_TOKEN}"
             printf 'BG_MCP_SUBJECTS=%s\n' "${BG_MCP_SUBJECTS}"
+            # Hashed from the file this run is about to ship, so the value can
+            # never describe a different config than the one that lands. See
+            # auth/compose.yaml for why Dex needs this at all.
+            printf 'DEX_CONFIG_SHA=%s\n' "$(sha256sum auth/config.yaml | cut -c1-12)"
           } > .env
 
           # apps/boardgames/compose.yaml uses ${VAR:?} for the three values
