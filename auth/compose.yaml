@@ -31,6 +31,9 @@ services:
       # starting Dex with an empty client secret and failing at login.
       DEX_GITHUB_CLIENT_ID: ${DEX_GITHUB_CLIENT_ID:?missing from .env}
       DEX_GITHUB_CLIENT_SECRET: ${DEX_GITHUB_CLIENT_SECRET:?missing from .env}
+      # The confidential client claude.ai authenticates as. Same `:?`: a blank
+      # secret would start Dex with a client nobody can use and fail at login.
+      DEX_CLAUDE_CLIENT_SECRET: ${DEX_CLAUDE_CLIENT_SECRET:?missing from .env}
 
       # Without this the Go runtime grows the heap until the cgroup kills it,
       # because it cannot see mem_limit. Set below the limit so the GC works

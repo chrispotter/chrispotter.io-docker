@@ -87,10 +87,30 @@ staticClients:
     public: true
     trustedPeers:
       - boardgames-mcp-cli
+      - claude-ai
 
-  # A hosted client (claude.ai) would be a third, confidential entry here --
-  # with a secret and an exact redirectURI. Deliberately omitted: we do not yet
-  # know the redirect URI it uses, and if it performs Dynamic Client
-  # Registration (RFC 7591) instead, no pre-registered entry helps at all.
-  # Open question in board-game-api#16. Prove the CLI flow first, then add this
-  # once the hosted client's actual behaviour can be observed.
+  # The hosted client: claude.ai connectors, and Claude sessions in the desktop
+  # app. This is the entry the comment here used to say was waiting on two
+  # unknowns; both are now answered.
+  #
+  # The redirect URI is documented rather than guessed:
+  # https://claude.com/docs/connectors/custom/remote-mcp names
+  # https://claude.ai/api/mcp/auth_callback as the callback to register. Exact,
+  # because Dex matches a non-public client's redirect URIs exactly -- and it
+  # must be the final URL, since a 30x on the way would drop the Authorization
+  # header.
+  #
+  # And Dynamic Client Registration turned out not to be required: the connector
+  # dialog offers "use your own OAuth client", which is what this entry is for.
+  # Dex publishes no registration_endpoint, so without that option none of this
+  # would be reachable.
+  #
+  # Confidential rather than public: claude.ai is a server-side client that can
+  # keep a secret, and unlike the CLI it has no localhost allowance to fall back
+  # on. Leaving the secret blank in the dialog would make Claude treat the id as
+  # a public client, which this entry is not.
+  - id: claude-ai
+    name: Claude
+    secret: $DEX_CLAUDE_CLIENT_SECRET
+    redirectURIs:
+      - https://claude.ai/api/mcp/auth_callback
