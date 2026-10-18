@@ -99,7 +99,6 @@ jobs:
           BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
           DEX_GITHUB_CLIENT_ID: ${{ secrets.DEX_GITHUB_CLIENT_ID }}
           DEX_GITHUB_CLIENT_SECRET: ${{ secrets.DEX_GITHUB_CLIENT_SECRET }}
-          DEX_CLAUDE_CLIENT_SECRET: ${{ secrets.DEX_CLAUDE_CLIENT_SECRET }}
           # The board-game images are built by the board-game-api repo, so
           # their tags cannot be derived from this repo's sha the way
           # SPLASH_TAG is. Variables, not secrets: pinning a deploy should be
@@ -118,7 +117,6 @@ jobs:
             printf 'BGG_API_TOKEN=%s\n' "${BGG_API_TOKEN}"
             printf 'DEX_GITHUB_CLIENT_ID=%s\n' "${DEX_GITHUB_CLIENT_ID}"
             printf 'DEX_GITHUB_CLIENT_SECRET=%s\n' "${DEX_GITHUB_CLIENT_SECRET}"
-            printf 'DEX_CLAUDE_CLIENT_SECRET=%s\n' "${DEX_CLAUDE_CLIENT_SECRET}"
             printf 'BG_API_TAG=%s\n' "${BG_API_TAG}"
             printf 'BG_MCP_TAG=%s\n' "${BG_MCP_TAG}"
             printf 'BG_DB_PASSWORD=%s\n' "${BG_DB_PASSWORD}"
@@ -134,7 +132,7 @@ jobs:
           # above that have no safe default. Catch a missing one here, where
           # the error names it, rather than as an opaque compose failure on
           # the droplet after the files have already been shipped.
-          for required in BG_DB_PASSWORD BG_WRITE_TOKEN BG_MCP_SUBJECTS DEX_CLAUDE_CLIENT_SECRET; do
+          for required in BG_DB_PASSWORD BG_WRITE_TOKEN BG_MCP_SUBJECTS; do
             if [ -z "${!required}" ]; then
               echo "::error::${required} is empty. Set it in this repository's"\
                    "secrets (BG_DB_PASSWORD, BG_WRITE_TOKEN) or variables"\

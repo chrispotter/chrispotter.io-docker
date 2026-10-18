@@ -105,12 +105,22 @@ staticClients:
   # Dex publishes no registration_endpoint, so without that option none of this
   # would be reachable.
   #
-  # Confidential rather than public: claude.ai is a server-side client that can
-  # keep a secret, and unlike the CLI it has no localhost allowance to fall back
-  # on. Leaving the secret blank in the dialog would make Claude treat the id as
-  # a public client, which this entry is not.
+  # Public, with an exact redirect URI. Dex supports that combination on
+  # purpose -- validateRedirectURI checks a client's named RedirectURIs before
+  # it considers whether the client is public, with the comment "required to
+  # make PKCE-enabled web apps work when configured as public clients".
+  #
+  # Registered confidential first, which failed: the connector dialog treats a
+  # blank secret as "this id is a public client" and sends none, and Dex
+  # answered "invalid client_secret on token request". Public is also the
+  # setting that leaves nothing to copy into the dialog.
+  #
+  # What still guards this: the authorization code can only be delivered to
+  # the redirect URI below, which is Claude's own callback, so starting a flow
+  # with this id gets an attacker nothing. PKCE binds the exchange, and
+  # MCP_ALLOWED_SUBJECTS is what actually decides who may use the server.
   - id: claude-ai
     name: Claude
-    secret: $DEX_CLAUDE_CLIENT_SECRET
+    public: true
     redirectURIs:
       - https://claude.ai/api/mcp/auth_callback
