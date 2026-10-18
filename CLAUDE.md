@@ -15,18 +15,34 @@ https://claude.ai/code/artifact/8ba61ddf-091a-43b7-b70f-305d5da1baf9
   Images are built in each source repo's Actions, pushed to GHCR, and pulled
   here. This repo only composes and routes.
 - **Memory is budgeted, not incidental.** Every container carries a
-  `mem_limit` — splash 32m, nginx-proxy 96m, acme-companion 64m — so the whole
-  site runs in roughly 192 MB. New services are chosen to fit that: it is why
-  the planned identity provider is Dex (~30 MB) and not Keycloak (~700 MB+).
-- **The proxy routes by hostname.** `nginx-proxy` reads `VIRTUAL_HOST` off each
-  container. Splitting one hostname by path needs `VIRTUAL_PATH`, which this
-  stack has not used yet and which the board-game deployment depends on.
+  `mem_limit` — splash 32m, nginx-proxy 96m, acme-companion 64m, dex 96m,
+  postgres 256m, api 96m, mcp 96m, migrate 64m. That is roughly 800 MB of caps
+  on a 1 GB box, deliberately over-subscribed: they are caps, not
+  reservations, and provision.sh lays down 2 GB of swap. New services are
+  chosen to fit: it is why the identity provider is Dex (~30 MB resident) and
+  not Keycloak (~700 MB+).
+- **The proxy routes by hostname, and only by hostname.** `nginx-proxy` reads
+  `VIRTUAL_HOST` off each container. An earlier plan split one hostname by
+  path with `VIRTUAL_PATH`; board-game-api#17 replaced it with one hostname
+  per service, so `VIRTUAL_PATH` is not used anywhere here and the UI and API
+  are different origins — which is what makes CORS load-bearing on the API.
 - **Each source repo owns one deployment unit.** board-game-api produces two
-  images, board-game-ui one. Planned layout:
-  `apps/board-games/` (postgres, migrate, api, mcp — 2 GHCR images),
-  `apps/ludoteca/` (the UI — 1 image), `apps/auth/` (Dex, upstream image).
-- **Hostnames**: `boardgames.chrispotter.io` (UI at `/`, API at `/api`),
-  `auth.chrispotter.io` (Dex), `boardgames-mcp.chrispotter.io` (already live).
+  images, board-game-ui one. Layout:
+  `apps/boardgames/` (postgres, migrate, api, mcp — 2 GHCR images, deployed),
+  `apps/ludoteca/` (the UI — 1 image, not built yet), `auth/` (Dex, upstream
+  image, deployed).
+- **Hostnames, one per service**: `boardgames.chrispotter.io` (UI, not
+  deployed yet), `boardgames-api.chrispotter.io` (API), `auth.chrispotter.io`
+  (Dex), `boardgames-mcp.chrispotter.io` (MCP). All one label deep, so
+  Cloudflare's free Universal SSL covers them. All DNS-only, not proxied: the
+  MCP transport streams and Cloudflare's proxy buffers responses and caps an
+  origin response at 100s.
+- **A bind-mounted config is invisible to Compose.** Editing `auth/config.yaml`
+  leaves the container spec identical, so `up -d` does nothing and Dex goes on
+  serving what it read at startup — a deploy that reports success and changed
+  nothing. `DEX_CONFIG_SHA` hashes the file into the container's environment so
+  Compose recreates it when the config actually changed. Any future
+  bind-mounted config read once at startup needs the same treatment.
 
 ## Agent skills
 
