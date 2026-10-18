@@ -106,6 +106,8 @@ jobs:
           # a visible, editable change. Unset means :latest.
           BG_API_TAG: ${{ vars.BG_API_TAG || 'latest' }}
           BG_MCP_TAG: ${{ vars.BG_MCP_TAG || 'latest' }}
+          # Built by board-game-ui, so the same reasoning applies.
+          BG_UI_TAG: ${{ vars.BG_UI_TAG || 'latest' }}
           BG_DB_PASSWORD: ${{ secrets.BG_DB_PASSWORD }}
           BG_WRITE_TOKEN: ${{ secrets.BG_WRITE_TOKEN }}
           # An allowlist rather than a credential, so a variable -- one you
@@ -121,6 +123,7 @@ jobs:
             printf 'DEX_CLAUDE_CLIENT_SECRET=%s\n' "${DEX_CLAUDE_CLIENT_SECRET}"
             printf 'BG_API_TAG=%s\n' "${BG_API_TAG}"
             printf 'BG_MCP_TAG=%s\n' "${BG_MCP_TAG}"
+            printf 'BG_UI_TAG=%s\n' "${BG_UI_TAG}"
             printf 'BG_DB_PASSWORD=%s\n' "${BG_DB_PASSWORD}"
             printf 'BG_WRITE_TOKEN=%s\n' "${BG_WRITE_TOKEN}"
             printf 'BG_MCP_SUBJECTS=%s\n' "${BG_MCP_SUBJECTS}"
@@ -153,12 +156,13 @@ jobs:
 
       - name: Pull and restart
         # NOTE on pulling the board-game images. GITHUB_TOKEN is scoped to this
-        # repository, and ghcr.io/chrispotter/board-game-{api,mcp} are PRIVATE
-        # packages owned by board-game-api -- a different repository. This
-        # token cannot pull them until that package grants access, under
+        # repository, and ghcr.io/chrispotter/board-game-{api,mcp,ui} are
+        # PRIVATE packages owned by board-game-api and board-game-ui --
+        # different repositories. This token cannot pull them until each
+        # package grants access, under
         #   Package settings -> Manage Actions access -> Add repository
         #       -> chrispotter.io-docker (Read)
-        # on each of the two packages. Without it `docker compose pull` fails
+        # on each of the three packages. Without it `docker compose pull` fails
         # with "denied" for those images only; splash, postgres and dex are
         # unaffected. The alternative is making the packages public.
         env:
