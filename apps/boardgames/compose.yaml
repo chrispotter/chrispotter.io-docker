@@ -131,13 +131,24 @@ services:
       # audience, and it must match the URL clients actually reach.
       MCP_RESOURCE_URL: https://boardgames-mcp.chrispotter.io/mcp
 
-      # Empty on purpose. Dex validates requested scopes against a fixed set --
-      # openid, email, profile, groups, offline_access, federated:id, and the
-      # audience:server:client_id: prefix -- and returns invalid_scope for
-      # anything else. Custom scopes like mcp:read are not a Dex feature, so
-      # requiring them here would reject every login. Authorization is carried
-      # by the subject allowlist below instead.
+      # Empty on purpose, and permanently so against Dex. A Dex access token is
+      # an ID token -- SignAccessToken delegates to SignIDToken -- and its
+      # claims carry no `scope` at all, so any requirement here would reject
+      # every genuine token for scopes it could never have carried. (Dex also
+      # refuses custom scopes like mcp:read at the authorization endpoint, with
+      # invalid_scope.) Authorization rests on the subject allowlist below.
       MCP_SCOPES: ""
+
+      # What clients are told to request -- a different question, and with Dex
+      # a different answer.
+      #
+      # Dex implements no RFC 8707 `resource` parameter and always signs `aud`
+      # as a client ID, so the only way this resource reaches a token's
+      # audience is the cross-client scope below, whose peer is registered in
+      # auth/config.yaml as a client whose id is literally this URL. Dex then
+      # mints aud = [this resource, the requesting client], which the
+      # verifier accepts.
+      MCP_ADVERTISED_SCOPES: "openid,audience:server:client_id:https://boardgames-mcp.chrispotter.io/mcp"
 
       # Required whenever OAUTH_ISSUER is set; the server refuses to start with
       # it empty rather than defaulting to allowing everyone. Issuer, audience
