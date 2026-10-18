@@ -1,0 +1,165 @@
+# The board game stack: Postgres, a one-shot schema migration, the HTTP API
+# and the MCP server.
+#
+# Two GHCR images, four services. api and migrate share
+# ghcr.io/chrispotter/board-game-api because that image ships goose and
+# /migrations alongside the binary, so the schema is applied by the same build
+# that serves it and the two cannot drift inside a deploy.
+#
+# board-game-api's own docker-compose.yml is NOT the ancestor of this file. It
+# builds from source and hardcodes a password; it is local development only.
+
+services:
+  # ------------------------------------------------------------------ data
+  db:
+    image: postgres:16-alpine
+    container_name: boardgames-db
+    restart: unless-stopped
+    # Deliberately not on `edge`. The proxy has no reason to reach Postgres,
+    # and the only things that do are on `internal` with it.
+    networks: [internal]
+    mem_limit: 256m
+    environment:
+      # The superuser, not a dedicated role: the 20250208163837 migration runs
+      # CREATE EXTENSION pgcrypto, which an unprivileged owner cannot do.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${BG_DB_PASSWORD:?missing from .env}
+      POSTGRES_DB: boardgame
+      # Defaults assume a machine with room. This box has 1 GB total and three
+      # other services on it.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=40
+      - -c
+      - work_mem=2MB
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d boardgame"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ------------------------------------------------------------- migration
+  # The compose equivalent of an init container: runs to completion, then
+  # exits. api and mcp wait on it completing successfully, so a failed
+  # migration stops the rollout instead of starting code against an old schema.
+  migrate:
+    image: ghcr.io/chrispotter/board-game-api:${BG_API_TAG:-latest}
+    container_name: boardgames-migrate
+    # goose, not the API binary. Same image, different entrypoint.
+    entrypoint: ["/goose", "up"]
+    networks: [internal]
+    mem_limit: 64m
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://postgres:${BG_DB_PASSWORD:?missing from .env}@db:5432/boardgame?sslmode=disable
+      GOOSE_MIGRATION_DIR: /migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ------------------------------------------------------------------- api
+  api:
+    image: ghcr.io/chrispotter/board-game-api:${BG_API_TAG:-latest}
+    container_name: boardgames-api
+    restart: unless-stopped
+    # Both networks: `edge` so nginx-proxy can route to it, `internal` so it
+    # can reach Postgres.
+    networks: [edge, internal]
+    mem_limit: 96m
+    environment:
+      DATABASE_URL: postgres://postgres:${BG_DB_PASSWORD:?missing from .env}@db:5432/boardgame?sslmode=disable
+      SERVER_PORT: "8080"
+      LOG_LEVEL: INFO
+
+      # Its own hostname, per board-game-api#17 -- not VIRTUAL_PATH on the UI's
+      # origin. Map form, not list form: the list form keeps the quotes as part
+      # of the value.
+      VIRTUAL_HOST: boardgames-api.chrispotter.io
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: boardgames-api.chrispotter.io
+      # Uncomment for the first issuance, then remove and recreate.
+      # LETSENCRYPT_TEST: "true"
+
+      # Load-bearing now, which it was not under the same-origin plan: the UI
+      # is a different origin, so every write is preceded by a preflight.
+      # The exact origin, never "*" -- a wildcard is rejected by browsers once
+      # credentials are involved, and RequireAuth means they are.
+      CORS_ALLOWED_ORIGINS: https://boardgames.chrispotter.io
+
+      # Writes only; reads are public. Unset means every write is refused
+      # rather than allowed, but `:?` catches the mistake here instead.
+      API_WRITE_TOKEN: ${BG_WRITE_TOKEN:?missing from .env}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # No healthcheck: the image is distroless/static, which has no shell and no
+    # wget, so the pattern used by splash and dex cannot run here. /healthz is
+    # served and reachable from the proxy; it just cannot be probed in-container.
+
+  # ------------------------------------------------------------------- mcp
+  # Same source tree, own image, own lifecycle. It reaches Postgres directly
+  # rather than calling the API over HTTP, and it does not migrate.
+  mcp:
+    image: ghcr.io/chrispotter/board-game-mcp:${BG_MCP_TAG:-latest}
+    container_name: boardgames-mcp
+    restart: unless-stopped
+    networks: [edge, internal]
+    mem_limit: 96m
+    environment:
+      DATABASE_URL: postgres://postgres:${BG_DB_PASSWORD:?missing from .env}@db:5432/boardgame?sslmode=disable
+      SERVER_PORT: "8080"
+      LOG_LEVEL: INFO
+
+      VIRTUAL_HOST: boardgames-mcp.chrispotter.io
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: boardgames-mcp.chrispotter.io
+      # LETSENCRYPT_TEST: "true"
+
+      # OAuth mode. Setting OAUTH_ISSUER switches the server off the shared
+      # secret entirely -- the two modes are exclusive, and API_WRITE_TOKEN is
+      # deliberately absent here as a result.
+      OAUTH_ISSUER: https://auth.chrispotter.io
+      # This server's canonical URI (RFC 8707). Tokens must name it in their
+      # audience, and it must match the URL clients actually reach.
+      MCP_RESOURCE_URL: https://boardgames-mcp.chrispotter.io/mcp
+
+      # Empty on purpose. Dex validates requested scopes against a fixed set --
+      # openid, email, profile, groups, offline_access, federated:id, and the
+      # audience:server:client_id: prefix -- and returns invalid_scope for
+      # anything else. Custom scopes like mcp:read are not a Dex feature, so
+      # requiring them here would reject every login. Authorization is carried
+      # by the subject allowlist below instead.
+      MCP_SCOPES: ""
+
+      # Required whenever OAUTH_ISSUER is set; the server refuses to start with
+      # it empty rather than defaulting to allowing everyone. Issuer, audience
+      # and scope checks prove a token is genuine -- this is the only one that
+      # establishes who is holding it, and Dex's bare GitHub connector will
+      # issue a passing token to any GitHub account without it.
+      #
+      # Subjects are opaque and cannot be known in advance. Attempt one login,
+      # read the rejected subject out of the logs (the error names it), then
+      # set this. See chrispotter.io-docker#1.
+      MCP_ALLOWED_SUBJECTS: ${BG_MCP_SUBJECTS:?missing from .env}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:
+
+networks:
+  edge:
+    external: true
+  # Private to this app. Compose namespaces it as chrispotter_internal, so it
+  # does not collide with anything another app file declares.
+  internal:
+    driver: bridge

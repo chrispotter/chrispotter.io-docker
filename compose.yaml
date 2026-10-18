@@ -8,7 +8,7 @@ include:
   - proxy/compose.yaml
   - apps/splash/compose.yaml
   - auth/compose.yaml
-  # - apps/boardgames/compose.yaml    # Phase 2
+  - apps/boardgames/compose.yaml
 
 networks:
   # Created once, out of band:  docker network create edge
