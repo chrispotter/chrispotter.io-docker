@@ -1,14 +1,23 @@
 services:
   dex:
-    # Pinned back from v2.46.0, which hangs on /keys here: login succeeds and
-    # a token is issued, but the JWKS endpoint never answers, so nothing can
-    # verify the token. Dex logs no error -- its handler does log on failure --
-    # so it blocks inside Signer.ValidationKeys() rather than erroring, at 0%
-    # CPU. v2.46.0 was 11 days old when this was hit, with several storage and
-    # refresh-rotation issues already filed against it; v2.45.1 has been out
-    # since March. /keys had never been exercised here before, so this is not a
-    # regression in our config -- it has simply never worked.
-    image: ghcr.io/dexidp/dex:v2.45.1
+    # Back to v2.46.0, deliberately, to settle two things at once.
+    #
+    # /keys hung on v2.46.0 and recovered after a deploy that changed the
+    # version AND added GOMEMLIMIT below, so which one fixed it was never
+    # established. Memory use fell from 84 MiB to 43 MiB across that change,
+    # which points at GOMEMLIMIT rather than the version -- a Go process with
+    # no view of its cgroup limit had no reason to collect. If /keys stays
+    # healthy here, v2.46.0 was innocent.
+    #
+    # The second reason: oauth2.pkce does not exist in v2.45.1. The block in
+    # config.yaml was accepted and silently ignored there, so this stack has
+    # been claiming to require PKCE while requiring nothing. v2.46.0 is the
+    # version where that config is real.
+    #
+    # If /keys hangs again, revert this file: v2.45.1 plus GOMEMLIMIT is known
+    # good, and the pkce block must then come out rather than stay as config
+    # that lies.
+    image: ghcr.io/dexidp/dex:v2.46.0
     container_name: dex
     restart: unless-stopped
     command: ["dex", "serve", "/etc/dex/config.yaml"]
