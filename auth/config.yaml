@@ -68,7 +68,27 @@ staticClients:
     name: Board Game MCP (CLI)
     public: true
 
-  # A hosted client (claude.ai) would be a second, confidential entry here --
+  # The MCP server's own entry. It never performs a flow; it exists so that a
+  # token can be audience-bound to the resource.
+  #
+  # Dex implements no RFC 8707 `resource` parameter, and it always signs `aud`
+  # as a *client ID* -- never an arbitrary URI. Its only cross-client mechanism
+  # is the scope audience:server:client_id:<peer>, which puts <peer> in the
+  # audience. So the peer's id has to BE the resource URI the MCP server
+  # checks against (MCP_RESOURCE_URL), character for character.
+  #
+  # trustedPeers is the precondition that makes it work: Dex refuses the
+  # cross-client scope unless the peer names the requesting client here.
+  - id: https://boardgames-mcp.chrispotter.io/mcp
+    name: Board games MCP server
+    # No secret: nothing ever authenticates as this client. `public: true`
+    # because a static client must be one or the other, not because a flow
+    # runs here.
+    public: true
+    trustedPeers:
+      - boardgames-mcp-cli
+
+  # A hosted client (claude.ai) would be a third, confidential entry here --
   # with a secret and an exact redirectURI. Deliberately omitted: we do not yet
   # know the redirect URI it uses, and if it performs Dynamic Client
   # Registration (RFC 7591) instead, no pre-registered entry helps at all.
