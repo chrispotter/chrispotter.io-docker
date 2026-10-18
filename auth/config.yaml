@@ -24,6 +24,18 @@ web:
 oauth2:
   skipApprovalScreen: true
 
+  # Required, not merely offered. Dex defaults Enforce to false, and treats a
+  # request naming no method as "plain", where the challenge equals the
+  # verifier and protects nothing. boardgames-mcp-cli is a public client with
+  # no secret at all, so for that one PKCE is the only thing binding a code to
+  # the client that asked for it -- too important to leave to whether a client
+  # opts in. S256 only: a client that would have fallen back to plain now
+  # fails at the authorization request instead of quietly getting nothing.
+  pkce:
+    enforce: true
+    codeChallengeMethodsSupported:
+      - S256
+
 # No local password database -- GitHub is the only way in.
 enablePasswordDB: false
 
@@ -109,8 +121,17 @@ staticClients:
   # keep a secret, and unlike the CLI it has no localhost allowance to fall back
   # on. Leaving the secret blank in the dialog would make Claude treat the id as
   # a public client, which this entry is not.
+  # secretEnv, NOT `secret: $DEX_CLAUDE_CLIENT_SECRET`. Dex expands environment
+  # variables only inside nested `config:` blocks -- storage, connectors,
+  # signer -- because expandEnvInMap runs on those and nothing else. A top
+  # level field like `secret` is taken literally, so the first attempt here
+  # registered the client with the eleven characters "$DEX_CLAUDE..." as its
+  # secret and rejected the real one. It fails as "invalid client credentials",
+  # which reads exactly like a mistyped secret and sends you looking at the
+  # wrong end. The GitHub connector below is what made this easy to get wrong:
+  # its $VAR does expand, because it sits under `config:`.
   - id: claude-ai
     name: Claude
-    secret: $DEX_CLAUDE_CLIENT_SECRET
+    secretEnv: DEX_CLAUDE_CLIENT_SECRET
     redirectURIs:
       - https://claude.ai/api/mcp/auth_callback
