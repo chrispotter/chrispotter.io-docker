@@ -99,6 +99,17 @@ jobs:
           BGG_API_TOKEN: ${{ secrets.BGG_API_TOKEN }}
           DEX_GITHUB_CLIENT_ID: ${{ secrets.DEX_GITHUB_CLIENT_ID }}
           DEX_GITHUB_CLIENT_SECRET: ${{ secrets.DEX_GITHUB_CLIENT_SECRET }}
+          # The board-game images are built by the board-game-api repo, so
+          # their tags cannot be derived from this repo's sha the way
+          # SPLASH_TAG is. Variables, not secrets: pinning a deploy should be
+          # a visible, editable change. Unset means :latest.
+          BG_API_TAG: ${{ vars.BG_API_TAG || 'latest' }}
+          BG_MCP_TAG: ${{ vars.BG_MCP_TAG || 'latest' }}
+          BG_DB_PASSWORD: ${{ secrets.BG_DB_PASSWORD }}
+          BG_WRITE_TOKEN: ${{ secrets.BG_WRITE_TOKEN }}
+          # An allowlist rather than a credential, so a variable -- one you
+          # cannot read is one you cannot edit.
+          BG_MCP_SUBJECTS: ${{ vars.BG_MCP_SUBJECTS }}
         run: |
           umask 077
           {
@@ -106,7 +117,25 @@ jobs:
             printf 'BGG_API_TOKEN=%s\n' "${BGG_API_TOKEN}"
             printf 'DEX_GITHUB_CLIENT_ID=%s\n' "${DEX_GITHUB_CLIENT_ID}"
             printf 'DEX_GITHUB_CLIENT_SECRET=%s\n' "${DEX_GITHUB_CLIENT_SECRET}"
+            printf 'BG_API_TAG=%s\n' "${BG_API_TAG}"
+            printf 'BG_MCP_TAG=%s\n' "${BG_MCP_TAG}"
+            printf 'BG_DB_PASSWORD=%s\n' "${BG_DB_PASSWORD}"
+            printf 'BG_WRITE_TOKEN=%s\n' "${BG_WRITE_TOKEN}"
+            printf 'BG_MCP_SUBJECTS=%s\n' "${BG_MCP_SUBJECTS}"
           } > .env
+
+          # apps/boardgames/compose.yaml uses ${VAR:?} for the three values
+          # above that have no safe default. Catch a missing one here, where
+          # the error names it, rather than as an opaque compose failure on
+          # the droplet after the files have already been shipped.
+          for required in BG_DB_PASSWORD BG_WRITE_TOKEN BG_MCP_SUBJECTS; do
+            if [ -z "${!required}" ]; then
+              echo "::error::${required} is empty. Set it in this repository's"\
+                   "secrets (BG_DB_PASSWORD, BG_WRITE_TOKEN) or variables"\
+                   "(BG_MCP_SUBJECTS) before deploying the board-game stack."
+              exit 1
+            fi
+          done
 
           # auth/ ships whole -- it carries config.yaml as well as compose.yaml.
           tar czf - compose.yaml proxy/compose.yaml auth/ apps/*/compose.yaml .env \
@@ -117,6 +146,15 @@ jobs:
           rm -f .env
 
       - name: Pull and restart
+        # NOTE on pulling the board-game images. GITHUB_TOKEN is scoped to this
+        # repository, and ghcr.io/chrispotter/board-game-{api,mcp} are PRIVATE
+        # packages owned by board-game-api -- a different repository. This
+        # token cannot pull them until that package grants access, under
+        #   Package settings -> Manage Actions access -> Add repository
+        #       -> chrispotter.io-docker (Read)
+        # on each of the two packages. Without it `docker compose pull` fails
+        # with "denied" for those images only; splash, postgres and dex are
+        # unaffected. The alternative is making the packages public.
         env:
           TAG: ${{ needs.build.outputs.tag }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
