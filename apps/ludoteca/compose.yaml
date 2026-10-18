@@ -1,0 +1,33 @@
+# Ludoteca, the board game UI: a static bundle served by nginx.
+#
+# One GHCR image, built by board-game-ui. It holds no secrets and talks to
+# nothing on the droplet: the browser calls boardgames-api.chrispotter.io
+# directly, a different origin, so this container needs no `internal` network
+# and no depends_on on the API.
+
+services:
+  ui:
+    image: ghcr.io/chrispotter/board-game-ui:${BG_UI_TAG:-latest}
+    container_name: ludoteca
+    restart: unless-stopped
+    networks: [edge]
+    # nginx:alpine serving files, the same shape as splash.
+    mem_limit: 32m
+    environment:
+      VIRTUAL_HOST: boardgames.chrispotter.io
+      VIRTUAL_PORT: 80
+      LETSENCRYPT_HOST: boardgames.chrispotter.io
+      # Uncomment for the first issuance, then remove and recreate.
+      # LETSENCRYPT_TEST: "true"
+    healthcheck:
+      # 127.0.0.1, not localhost: localhost resolves to ::1 first inside the
+      # container and nginx binds IPv4 only -- the same trap as splash.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  edge:
+    external: true

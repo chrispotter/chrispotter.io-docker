@@ -15,9 +15,9 @@ https://claude.ai/code/artifact/8ba61ddf-091a-43b7-b70f-305d5da1baf9
   Images are built in each source repo's Actions, pushed to GHCR, and pulled
   here. This repo only composes and routes.
 - **Memory is budgeted, not incidental.** Every container carries a
-  `mem_limit` — splash 32m, nginx-proxy 96m, acme-companion 64m, dex 96m,
-  postgres 256m, api 96m, mcp 96m, migrate 64m. That is roughly 800 MB of caps
-  on a 1 GB box, deliberately over-subscribed: they are caps, not
+  `mem_limit` — splash 32m, ludoteca 32m, nginx-proxy 96m, acme-companion
+  64m, dex 192m, postgres 256m, api 96m, mcp 96m, migrate 64m. That is roughly
+  930 MB of caps on a 1 GB box, deliberately over-subscribed: they are caps, not
   reservations, and provision.sh lays down 2 GB of swap. New services are
   chosen to fit: it is why the identity provider is Dex (~30 MB resident) and
   not Keycloak (~700 MB+).
@@ -29,14 +29,14 @@ https://claude.ai/code/artifact/8ba61ddf-091a-43b7-b70f-305d5da1baf9
 - **Each source repo owns one deployment unit.** board-game-api produces two
   images, board-game-ui one. Layout:
   `apps/boardgames/` (postgres, migrate, api, mcp — 2 GHCR images, deployed),
-  `apps/ludoteca/` (the UI — 1 image, not built yet), `auth/` (Dex, upstream
+  `apps/ludoteca/` (the UI — 1 GHCR image, deployed), `auth/` (Dex, upstream
   image, deployed).
-- **Hostnames, one per service**: `boardgames.chrispotter.io` (UI, not
-  deployed yet), `boardgames-api.chrispotter.io` (API), `auth.chrispotter.io`
-  (Dex), `boardgames-mcp.chrispotter.io` (MCP). All one label deep, so
-  Cloudflare's free Universal SSL covers them. All DNS-only, not proxied: the
-  MCP transport streams and Cloudflare's proxy buffers responses and caps an
-  origin response at 100s.
+- **Hostnames, one per service**: `boardgames.chrispotter.io` (UI),
+  `boardgames-api.chrispotter.io` (API), `auth.chrispotter.io` (Dex),
+  `boardgames-mcp.chrispotter.io` (MCP). All one label deep, so Cloudflare's
+  free Universal SSL covers them. All DNS-only, not proxied: the MCP transport
+  streams and Cloudflare's proxy buffers responses and caps an origin response
+  at 100s.
 - **A bind-mounted config is invisible to Compose.** Editing `auth/config.yaml`
   leaves the container spec identical, so `up -d` does nothing and Dex goes on
   serving what it read at startup — a deploy that reports success and changed
