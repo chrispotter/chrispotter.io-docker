@@ -24,6 +24,21 @@ web:
 oauth2:
   skipApprovalScreen: true
 
+  # Required, not merely offered. Dex defaults Enforce to false, and defaults a
+  # request that names no method to "plain" -- where the challenge equals the
+  # verifier, which protects nothing. Both clients here are public, so PKCE is
+  # the only thing binding an authorization code to the client that asked for
+  # it; leaving it optional means the server relies on every client choosing to
+  # do the right thing.
+  #
+  # S256 only. Dropping "plain" narrows what the discovery document advertises,
+  # and a client that would have picked plain now fails loudly at the
+  # authorization request rather than quietly getting no protection.
+  pkce:
+    enforce: true
+    codeChallengeMethodsSupported:
+      - S256
+
 # No local password database -- GitHub is the only way in.
 enablePasswordDB: false
 
@@ -117,8 +132,15 @@ staticClients:
   #
   # What still guards this: the authorization code can only be delivered to
   # the redirect URI below, which is Claude's own callback, so starting a flow
-  # with this id gets an attacker nothing. PKCE binds the exchange, and
-  # MCP_ALLOWED_SUBJECTS is what actually decides who may use the server.
+  # with this id gets an attacker nothing. PKCE binds the exchange -- and is
+  # enforced above rather than assumed, which it has to be once no client here
+  # carries a secret. MCP_ALLOWED_SUBJECTS is what actually decides who may
+  # use the server, and it holds even if everything above it goes wrong.
+  #
+  # What is genuinely given up: nothing authenticates the client at the token
+  # endpoint, so a stolen code plus its verifier is enough, and there is no
+  # secret to rotate if this client ever needs cutting off -- the id has to
+  # change instead.
   - id: claude-ai
     name: Claude
     public: true
