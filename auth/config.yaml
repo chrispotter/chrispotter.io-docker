@@ -26,7 +26,14 @@ oauth2:
 
   # Required, not merely offered. Dex defaults Enforce to false, and treats a
   # request naming no method as "plain", where the challenge equals the
-  # verifier and protects nothing. boardgames-mcp-cli is a public client with
+  # verifier and protects nothing.
+  #
+  # This key did nothing on v2.45.1 -- oauth2.pkce does not exist there, and
+  # Dex accepts unknown config without complaint, so the block sat here looking
+  # like a control while discovery went on advertising "plain" and requests
+  # with no code_challenge went on being accepted. It is live from v2.46.0.
+  # Check it after any version change: curl the discovery document and confirm
+  # code_challenge_methods_supported is ["S256"] alone. boardgames-mcp-cli is a public client with
   # no secret at all, so for that one PKCE is the only thing binding a code to
   # the client that asked for it -- too important to leave to whether a client
   # opts in. S256 only: a client that would have fallen back to plain now
