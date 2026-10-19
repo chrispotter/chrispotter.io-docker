@@ -114,6 +114,23 @@ jobs:
           # cannot read is one you cannot edit.
           BG_MCP_SUBJECTS: ${{ vars.BG_MCP_SUBJECTS }}
         run: |
+          # Checked before .env is written, not after: the exit below skips
+          # the `rm -f .env` at the end of this step, so validating first is
+          # what keeps a failed deploy from leaving a file of secrets on the
+          # runner. These are the values apps/boardgames/compose.yaml takes as
+          # ${VAR:?}, caught here -- where the error names the one to set --
+          # rather than as an opaque compose failure on the droplet after the
+          # files have already been shipped.
+          for required in BG_DB_PASSWORD BG_WRITE_TOKEN BG_MCP_SUBJECTS DEX_CLAUDE_CLIENT_SECRET BGG_API_TOKEN; do
+            if [ -z "${!required}" ]; then
+              echo "::error::${required} is empty. Set it in this repository's"\
+                   "secrets (BG_DB_PASSWORD, BG_WRITE_TOKEN, BGG_API_TOKEN,"\
+                   "DEX_CLAUDE_CLIENT_SECRET) or variables (BG_MCP_SUBJECTS)"\
+                   "before deploying the board-game stack."
+              exit 1
+            fi
+          done
+
           umask 077
           {
             printf 'SPLASH_TAG=%s\n' "${TAG}"
@@ -132,19 +149,6 @@ jobs:
             # auth/compose.yaml for why Dex needs this at all.
             printf 'DEX_CONFIG_SHA=%s\n' "$(sha256sum auth/config.yaml | cut -c1-12)"
           } > .env
-
-          # apps/boardgames/compose.yaml uses ${VAR:?} for the three values
-          # above that have no safe default. Catch a missing one here, where
-          # the error names it, rather than as an opaque compose failure on
-          # the droplet after the files have already been shipped.
-          for required in BG_DB_PASSWORD BG_WRITE_TOKEN BG_MCP_SUBJECTS DEX_CLAUDE_CLIENT_SECRET; do
-            if [ -z "${!required}" ]; then
-              echo "::error::${required} is empty. Set it in this repository's"\
-                   "secrets (BG_DB_PASSWORD, BG_WRITE_TOKEN) or variables"\
-                   "(BG_MCP_SUBJECTS) before deploying the board-game stack."
-              exit 1
-            fi
-          done
 
           # auth/ ships whole -- it carries config.yaml as well as compose.yaml.
           tar czf - compose.yaml proxy/compose.yaml auth/ apps/*/compose.yaml .env \
