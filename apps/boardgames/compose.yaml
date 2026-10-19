@@ -167,6 +167,12 @@ services:
       # read the rejected subject out of the logs (the error names it), then
       # set this. See chrispotter.io-docker#1.
       MCP_ALLOWED_SUBJECTS: ${BG_MCP_SUBJECTS:?missing from .env}
+
+      # The hydration tools reach BoardGameGeek, so this container needs the
+      # token the api service already gets. Same `:?` form: without it the
+      # tools would answer "BoardGameGeek is not configured" on every call,
+      # which looks like a BGG outage rather than a missing value here.
+      BGG_API_TOKEN: ${BGG_API_TOKEN:?missing from .env}
     depends_on:
       migrate:
         condition: service_completed_successfully
