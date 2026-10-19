@@ -97,6 +97,13 @@ services:
       # Writes only; reads are public. Unset means every write is refused
       # rather than allowed, but `:?` catches the mistake here instead.
       API_WRITE_TOKEN: ${BG_WRITE_TOKEN:?missing from .env}
+
+      # BoardGameGeek has required a registered application's bearer token
+      # since 2025. It lives here and only here: handed to the UI image as a
+      # build argument it would be inlined into the published bundle and
+      # readable by every visitor, which is the whole point of moving these
+      # calls server-side (board-game-ui#4).
+      BGG_API_TOKEN: ${BGG_API_TOKEN:?missing from .env}
     depends_on:
       migrate:
         condition: service_completed_successfully
