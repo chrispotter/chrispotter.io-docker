@@ -1,31 +1,37 @@
 services:
   dex:
-    # Back to v2.46.0, deliberately, to settle two things at once.
+    # Pinned to v2.45.1. v2.46.0 hangs here, and that is now settled rather
+    # than suspected.
     #
-    # /keys hung on v2.46.0 and recovered after a deploy that changed the
-    # version AND added GOMEMLIMIT below, so which one fixed it was never
-    # established. Memory use fell from 84 MiB to 43 MiB across that change,
-    # which points at GOMEMLIMIT rather than the version -- a Go process with
-    # no view of its cgroup limit had no reason to collect. If /keys stays
-    # healthy here, v2.46.0 was innocent.
+    # The first /keys hang recovered after a deploy that changed the version
+    # AND added GOMEMLIMIT, so #11 put v2.46.0 back with GOMEMLIMIT kept, to
+    # find out which had fixed it. /keys hung again under that combination,
+    # and /auth with it -- every endpoint that touches storage blocks, while
+    # /healthz and discovery go on answering instantly. GOMEMLIMIT was not the
+    # fix; v2.46.0 is the fault.
     #
-    # The second reason: oauth2.pkce does not exist in v2.45.1. The block in
-    # config.yaml was accepted and silently ignored there, so this stack has
-    # been claiming to require PKCE while requiring nothing. v2.46.0 is the
-    # version where that config is real.
+    # It does not hang at startup. It serves for a while and then stops, so a
+    # deploy that checks /keys straight away passes, and an MCP container that
+    # already cached the JWKS keeps working. It surfaced only when an unrelated
+    # MCP redeploy came up with an empty key cache and every token
+    # verification hung behind /keys -- which reads as a connector timeout,
+    # not an auth failure.
     #
-    # If /keys hangs again, revert this file: v2.45.1 plus GOMEMLIMIT is known
-    # good, and the pkce block must then come out rather than stay as config
-    # that lies.
-    image: ghcr.io/dexidp/dex:v2.46.0
+    # v2.45.1 has not been proven against this either: it ran for about four
+    # hours before #11 replaced it. If it hangs the same way after a day or
+    # two, the version was never the whole story.
+    #
+    # oauth2.pkce is gone from config.yaml as a result: v2.45.1 does not have
+    # the key and would ignore it. Revisit when a v2.46.x fixes the hang.
+    image: ghcr.io/dexidp/dex:v2.45.1
     container_name: dex
     restart: unless-stopped
     command: ["dex", "serve", "/etc/dex/config.yaml"]
     networks: [edge]
     # Raised from 96m: dex was sitting at 84 MiB, far above the ~30 MB it is
     # meant to want, and a Go process does not see a cgroup limit unless
-    # GOMEMLIMIT tells it. Changed at the same time as the version pin above,
-    # so if /keys recovers the two still need bisecting to know which did it.
+    # GOMEMLIMIT tells it. Kept on its own merits: it was not the /keys fix
+    # (see the version pin above), but it did halve resident memory.
     mem_limit: 192m
     volumes:
       # Relative to this file -- compose `include` resolves an included
