@@ -4,10 +4,17 @@ name: Re-hydrate the Ludoteca
 # deployed API's own pass (board-game-api#41).
 #
 # It lives here rather than in board-game-api because the credential does.
-# BG_WRITE_TOKEN is this repository's secret -- it is what the deploy writes
-# into the droplet's .env -- so this is the only place a caller can be
-# authorised without the token being copied somewhere else or handed to a
-# person to paste.
+# BG_WRITE_TOKEN is this repository's secret, so this is the only place a
+# caller can be authorised without the token being copied somewhere else or
+# handed to a person to paste.
+#
+# BROKEN BY OIDC, AND KNOWINGLY SO. The api service now authenticates through
+# Dex and the two schemes are exclusive, so this call is refused with 401 from
+# the moment that deploy lands. There is no machine path to a replacement
+# token: Dex would mint one through client credentials, but the API's
+# allowlist matches a verified email address and a client-credentials token
+# carries none. Fixing it means the API accepting both schemes at once --
+# chrispotter.io-docker#18 records the choice.
 #
 # Why it exists at all: adding a field to a game is not the end of adding a
 # field. The column ships empty and the games already in the Ludoteca only
@@ -37,7 +44,8 @@ jobs:
     steps:
       - name: Call the pass
         env:
-          # The same secret the deploy ships to the droplet as API_WRITE_TOKEN.
+          # The secret the api service used to accept as API_WRITE_TOKEN,
+          # and no longer does. See the header.
           WRITE_TOKEN: ${{ secrets.BG_WRITE_TOKEN }}
         run: |
           if [ -z "${WRITE_TOKEN}" ]; then

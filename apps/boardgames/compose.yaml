@@ -94,9 +94,47 @@ services:
       # credentials are involved, and RequireAuth means they are.
       CORS_ALLOWED_ORIGINS: https://boardgames.chrispotter.io
 
-      # Writes only; reads are public. Unset means every write is refused
-      # rather than allowed, but `:?` catches the mistake here instead.
-      API_WRITE_TOKEN: ${BG_WRITE_TOKEN:?missing from .env}
+      # OAuth mode, exactly as on the mcp service below. Setting OAUTH_ISSUER
+      # switches the API off the shared secret entirely -- internal/server.go
+      # picks one authenticator or the other, never both -- so API_WRITE_TOKEN
+      # is gone from this service rather than left here as a no-op.
+      #
+      # That has a consequence inside this repo: the Re-hydrate workflow calls
+      # POST /api/games/hydrate with BG_WRITE_TOKEN and will be refused from
+      # the moment this is deployed. It is the only machine caller of a write,
+      # and nothing here can give it an OIDC token -- a client-credentials
+      # token carries no email, so the allowlist below would refuse it anyway.
+      # Tracked in chrispotter.io-docker#18.
+      OAUTH_ISSUER: https://auth.chrispotter.io
+
+      # This API's canonical URI (RFC 8707), distinct from the MCP server's so
+      # that a token minted for one is refused by the other.
+      #
+      # Required whenever OAUTH_ISSUER is set: the service refuses to start
+      # without it ("oauth: resource is required") rather than falling back to
+      # the shared secret when the issuer is half-configured. The two go in
+      # together or the container does not come up.
+      #
+      # It must equal the UI image's REACT_APP_API_URL character for
+      # character. That is the string the browser asks Dex to put in the
+      # token's audience, and the verifier here compares the two literally.
+      API_RESOURCE_URL: https://boardgames-api.chrispotter.io/api
+
+      # Who may write. Everyone else who signs in is a reader -- the normal
+      # outcome, and not an error.
+      #
+      # Two addresses for one mailbox, and both are needed: Dex's GitHub
+      # connector reports the +github form and Google reports the plain one.
+      # Matching on `sub` instead is not an option -- Dex mints a different
+      # subject per connector, so the two routes would never agree on who the
+      # admin is. The API requires email_verified on top of the match.
+      #
+      # Literal rather than an .env variable: an address is not a credential,
+      # and an allowlist nobody can read is an allowlist nobody can edit.
+      # Empty would start fine and let nobody write, which is why it is here
+      # and not left to a secret that might be unset -- look for
+      # "N admin address(es)" in the startup log, with N of 2.
+      API_ADMIN_EMAILS: chris.potter.3d+github@gmail.com,chris.potter.3d@gmail.com
 
       # BoardGameGeek has required a registered application's bearer token
       # since 2025. It lives here and only here: handed to the UI image as a
@@ -131,8 +169,8 @@ services:
       # LETSENCRYPT_TEST: "true"
 
       # OAuth mode. Setting OAUTH_ISSUER switches the server off the shared
-      # secret entirely -- the two modes are exclusive, and API_WRITE_TOKEN is
-      # deliberately absent here as a result.
+      # secret entirely -- the two modes are exclusive. The api service above
+      # now runs the same way, so neither service reads API_WRITE_TOKEN.
       OAUTH_ISSUER: https://auth.chrispotter.io
       # This server's canonical URI (RFC 8707). Tokens must name it in their
       # audience, and it must match the URL clients actually reach.
