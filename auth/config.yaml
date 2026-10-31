@@ -19,6 +19,27 @@ web:
   # Plain HTTP here; nginx-proxy terminates TLS in front.
   http: 0.0.0.0:5556
 
+  # CORS, and it is load-bearing for the Ludoteca rather than decorative.
+  #
+  # The UI is a different origin (boardgames.chrispotter.io) and reads two
+  # things from here with fetch: the discovery document, to find out where
+  # /auth and /token are, and then /token, to exchange its authorization
+  # code. Both are plain cross-origin reads, so without an
+  # Access-Control-Allow-Origin on the response the browser discards it and
+  # the app sees "Failed to fetch" -- before any redirect happens, so the
+  # failure looks like Dex being down rather than a header being absent.
+  #
+  # The redirect legs need nothing here: a browser navigating to /auth is not
+  # a fetch and no origin policy applies to it. Only the two reads do, which
+  # is why signing in got this far without it.
+  #
+  # One origin, exactly, and never "*": the exchange is what turns a code
+  # into a token, and that is not a response to hand to any page that asks.
+  # The MCP clients are unaffected -- a CLI and a server-side exchange are
+  # not browsers and send no Origin.
+  allowedOrigins:
+    - https://boardgames.chrispotter.io
+
 # One user, who is also the operator. An approval screen on every token
 # exchange is friction with no security value at this scale.
 oauth2:
