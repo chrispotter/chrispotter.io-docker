@@ -56,13 +56,17 @@ connectors:
       # the flow and receive a token with valid issuer, audience and scopes --
       # all the things the resource server checks.
       #
-      # Option A: restrict to an org you control (needs a GitHub org).
+      # Option A, still not taken: restrict to an org you control (needs a
+      # GitHub org).
       # orgs:
       #   - name: your-org
       #
-      # Option B: allowlist the subject or email at the resource server.
-      #   board-game-api validates issuer, scopes and audience -- not identity.
-      #   Tracked in board-game-api#16.
+      # Option B is what is in force, at each resource server rather than
+      # here: the MCP server allowlists subjects (MCP_ALLOWED_SUBJECTS) and
+      # the API allowlists verified email addresses (API_ADMIN_EMAILS).
+      # Anyone else completes the flow and gets a genuine token that buys
+      # them exactly what a visitor already has -- reads. Decided in
+      # chrispotter.io-docker#1, turned on in #18.
 
 staticClients:
   # CLI client -- Claude Code and anything else that runs locally.
@@ -135,3 +139,44 @@ staticClients:
     secretEnv: DEX_CLAUDE_CLIENT_SECRET
     redirectURIs:
       - https://claude.ai/api/mcp/auth_callback
+
+  # The Ludoteca's own client -- the browser app at
+  # boardgames.chrispotter.io, signing a person in so the API will accept a
+  # write from them (board-game-ui#12).
+  #
+  # Public, and not by choice: a single-page app cannot keep a secret. Every
+  # REACT_APP_* value is substituted literally into the published bundle, so a
+  # secret handed to the build would be readable by every visitor. PKCE is
+  # what stands in for it -- the UI sends S256 of its own accord, which is the
+  # only thing binding an authorization code to the browser that asked for
+  # it, since oauth2.pkce cannot be enforced on v2.45.1 (see above).
+  #
+  # The redirect URI is exact. Dex matches a registered redirect character for
+  # character and supports no wildcards, and the localhost allowance that
+  # boardgames-mcp-cli leans on is for CLI clients only -- it does not help a
+  # browser. /auth/callback is the path board-game-ui#27 settled on, and the
+  # UI's nginx resolves it through its SPA fallback, so it loads the app
+  # rather than 404ing. Changing it here alone breaks sign-in; it has to
+  # change in both places at once.
+  - id: boardgames-ui
+    name: Ludoteca
+    public: true
+    redirectURIs:
+      - https://boardgames.chrispotter.io/auth/callback
+
+  # The HTTP API's entry: the twin of the MCP server's above, for exactly the
+  # same reason. Dex signs `aud` as a client ID and implements no RFC 8707
+  # `resource` parameter, so the only route from API_RESOURCE_URL into a
+  # token's audience is the cross-client scope
+  # audience:server:client_id:<peer> -- which means the peer's id has to BE
+  # that URL, character for character.
+  #
+  # No flow ever runs as this client. trustedPeers is the whole point: Dex
+  # refuses the cross-client scope unless the peer names the client asking
+  # for it, so the UI is named here. Only the UI -- boardgames-mcp-cli and
+  # claude-ai hold MCP tokens, which this API is supposed to refuse.
+  - id: https://boardgames-api.chrispotter.io/api
+    name: Board games API
+    public: true
+    trustedPeers:
+      - boardgames-ui
