@@ -37,6 +37,15 @@ https://claude.ai/code/artifact/8ba61ddf-091a-43b7-b70f-305d5da1baf9
   free Universal SSL covers them. All DNS-only, not proxied: the MCP transport
   streams and Cloudflare's proxy buffers responses and caps an origin response
   at 100s.
+- **Dex needs `web.allowedOrigins`, or no browser can sign in.** The UI reads
+  the discovery document and then `/token` with `fetch`, from a different
+  origin, so without that key the browser discards both responses and the app
+  reports `Failed to fetch` before Dex is ever reached — which reads as Dex
+  being down rather than a header being absent. The redirect legs need
+  nothing: a browser navigating to `/auth` is not a fetch. The trap is that
+  curl has no origin policy, so the whole flow can verify green from the
+  command line and be broken in every browser; this cost a deploy to find.
+
 - **Membership of the `chrispotter-sso` GitHub org is the login, for every
   service.** Dex's `orgs` check sits on the connector, not on a client, so it
   gates `boardgames-ui`, `boardgames-mcp-cli`, `claude-ai` and anything added
