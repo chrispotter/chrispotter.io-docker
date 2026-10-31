@@ -69,25 +69,49 @@ connectors:
       clientSecret: $DEX_GITHUB_CLIENT_SECRET
       redirectURI: https://auth.chrispotter.io/callback
 
-      # READ THIS BEFORE GOING LIVE.
+      # WHO MAY SIGN IN. Both controls are in force; they answer different
+      # questions and neither replaces the other.
       #
       # A bare GitHub connector authenticates *any* GitHub account. It proves
-      # someone is a GitHub user; it does not prove they are you. Without one
-      # of the two controls below, anyone who finds the endpoint can complete
-      # the flow and receive a token with valid issuer, audience and scopes --
-      # all the things the resource server checks.
+      # someone is a GitHub user; it does not prove they are you. That was the
+      # state of things until now: a stranger could complete the whole flow
+      # and come away with a token carrying a valid issuer, audience and
+      # signature -- everything a resource server checks except identity.
       #
-      # Option A, still not taken: restrict to an org you control (needs a
-      # GitHub org).
-      # orgs:
-      #   - name: your-org
+      # `orgs` below is the first control, and the only one Dex itself
+      # offers. Everything past it is the second: the MCP server allowlists
+      # subjects (MCP_ALLOWED_SUBJECTS) and the API allowlists verified email
+      # addresses (API_ADMIN_EMAILS), so even a member of the org who is not
+      # on those lists gets a genuine token that buys exactly what a visitor
+      # already has -- reads. chrispotter.io-docker#1 chose the second,
+      # #18 turned it on, and this adds the first in front of it.
       #
-      # Option B is what is in force, at each resource server rather than
-      # here: the MCP server allowlists subjects (MCP_ALLOWED_SUBJECTS) and
-      # the API allowlists verified email addresses (API_ADMIN_EMAILS).
-      # Anyone else completes the flow and gets a genuine token that buys
-      # them exactly what a visitor already has -- reads. Decided in
-      # chrispotter.io-docker#1, turned on in #18.
+      # Dex has no per-user allowlist, so membership of an organization is the
+      # nearest thing to naming one account. chrispotter-sso exists for this
+      # and nothing else: no repositories, one member.
+      #
+      # It is named for the identity service rather than for an app on
+      # purpose. This key sits on the *connector*, so it gates every client
+      # Dex serves -- boardgames-ui, boardgames-mcp-cli, claude-ai, and
+      # whatever comes next -- and there is no per-client equivalent. An org
+      # named after one app would have been the login gate for all the
+      # others.
+      #
+      # The consequence worth remembering is the inversion: adding somebody
+      # to that organization grants them a login to everything behind
+      # auth.chrispotter.io. It is a gate, not a place to collaborate from.
+      #
+      # Renaming it is a config change here as well. GitHub redirects an old
+      # organization URL in a browser, but GET /orgs/<old>/members answers
+      # 404, which is the call this check makes -- so a rename that is not
+      # mirrored here locks everybody out rather than degrading quietly.
+      #
+      # Setting this makes Dex ask GitHub for read:org alongside user:email,
+      # so the consent screen changes and the app may need approving for the
+      # organization. Membership can stay private: read:org sees it either
+      # way, and nothing here requires a public member.
+      orgs:
+        - name: chrispotter-sso
 
 staticClients:
   # CLI client -- Claude Code and anything else that runs locally.

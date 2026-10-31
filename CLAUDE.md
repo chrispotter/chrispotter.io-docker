@@ -37,6 +37,16 @@ https://claude.ai/code/artifact/8ba61ddf-091a-43b7-b70f-305d5da1baf9
   free Universal SSL covers them. All DNS-only, not proxied: the MCP transport
   streams and Cloudflare's proxy buffers responses and caps an origin response
   at 100s.
+- **Membership of the `chrispotter-sso` GitHub org is the login, for every
+  service.** Dex's `orgs` check sits on the connector, not on a client, so it
+  gates `boardgames-ui`, `boardgames-mcp-cli`, `claude-ai` and anything added
+  later, with no per-client equivalent. That org exists only to be that gate:
+  no repositories, one member, named for the identity service rather than for
+  an app. Adding somebody to it grants them a login everywhere behind
+  `auth.chrispotter.io` — and renaming it breaks sign-in until `auth/config.yaml`
+  is changed too, because `GET /orgs/<old>/members` 404s where a browser would
+  have been redirected.
+
 - **A bind-mounted config is invisible to Compose.** Editing `auth/config.yaml`
   leaves the container spec identical, so `up -d` does nothing and Dex goes on
   serving what it read at startup — a deploy that reports success and changed
